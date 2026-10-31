@@ -90,7 +90,7 @@ const perSheet = SHEET.cols * SHEET.rows;
               <input id="line1" name="line1" type="text" autocomplete="off" value={start.line1} />
             </div>
             <div class="field grow">
-              <label for="line2">SECOND LINE (OPTIONAL)</label>
+              <label for="line2">SECOND LINE <span class="optional">(optional)</span></label>
               <input id="line2" name="line2" type="text" autocomplete="off" value={start.line2} />
             </div>
           </div>
@@ -451,14 +451,21 @@ const perSheet = SHEET.cols * SHEET.rows;
     gap: 8px;
   }
 
+  /* Bottom-align side-by-side fields so their inputs share a line even if one label wraps. */
   .row {
     display: flex;
     flex-wrap: wrap;
+    align-items: flex-end;
     gap: 16px;
   }
 
   .grow {
     flex: 1 1 180px;
+  }
+
+  .optional {
+    font-weight: 400;
+    letter-spacing: 0.02em;
   }
 
   .month {

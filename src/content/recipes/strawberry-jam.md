@@ -9,6 +9,7 @@ ingredients:
   - "[AMOUNT] sugar"
   - "[AMOUNT] lemon juice"
 tip: "[HER TIP FOR THIS RECIPE]"
+draft: true
 ---
 
 1. Put the hulled strawberries in the pan with the sugar. Leave for [TIME].

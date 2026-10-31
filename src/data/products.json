@@ -40,11 +40,12 @@
     "order": 4,
     "kind": "Cordial",
     "title": "Elderflower cordial",
-    "note": "Elderflowers, picked from the hedgerow. Not made yet.",
+    "note": "Elderflowers, picked from the hedgerow.",
     "line1": "Elderflower",
     "line2": "Cordial",
     "phrase": "Hedgerow picked",
-    "basket": "elderflowers"
+    "basket": "elderflowers",
+    "made": "2026-05"
   },
   {
     "id": "moonshine",

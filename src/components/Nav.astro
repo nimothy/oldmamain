@@ -1,7 +1,8 @@
 ---
 import { href } from '../lib/url';
+import { getRecipes } from '../lib/recipes';
 
-export type NavKey = 'range' | 'kitchen' | 'labels' | 'about';
+export type NavKey = 'range' | 'kitchen' | 'labels';
 
 interface Props {
   label: string;
@@ -10,11 +11,12 @@ interface Props {
 
 const { label, current } = Astro.props;
 
+const hasRecipes = (await getRecipes()).length > 0;
+
 const links: { key: NavKey; text: string; to: string }[] = [
   { key: 'range', text: 'THE RANGE', to: href('/#range') },
-  { key: 'kitchen', text: 'THE KITCHEN', to: href('/recipes/') },
+  ...(hasRecipes ? [{ key: 'kitchen' as const, text: 'THE KITCHEN', to: href('/recipes/') }] : []),
   { key: 'labels', text: 'LABELS', to: href('/labels/') },
-  { key: 'about', text: 'ABOUT', to: href('/#about') },
 ];
 ---
 

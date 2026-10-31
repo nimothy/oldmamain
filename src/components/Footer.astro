@@ -16,7 +16,6 @@ const { nav = false, rule = false } = Astro.props;
       <p class="fell">SMALL BATCH &bull; MADE WITH LOVE</p>
     </div>
     {nav && <Nav label="Footer" />}
-    <p class:list={{ contact: nav }}>[CONTACT DETAILS]</p>
   </div>
 </footer>
 
@@ -41,9 +40,5 @@ const { nav = false, rule = false } = Astro.props;
   .wordmark {
     font-size: 28px;
     line-height: 1.2;
-  }
-
-  .contact {
-    flex: 1 1 100%;
   }
 </style>

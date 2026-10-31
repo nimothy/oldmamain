@@ -1,7 +1,6 @@
 ---
 import Base from '../layouts/Base.astro';
 import Label from '../components/Label.astro';
-import { getCollection } from 'astro:content';
 import { getProducts, productLabel } from '../lib/products';
 import { batchFromMade } from '../lib/label';
 import { href } from '../lib/url';
@@ -9,7 +8,7 @@ import { href } from '../lib/url';
 const products = await getProducts();
 const hero = products.find((p) => p.id === 'strawberry-jam') ?? products[0];
 
-// Made products in date order, then whatever is coming next.
+// Made products in date order, then anything not made yet.
 const timeline = [
   ...products
     .filter((p) => p.data.made)
@@ -17,16 +16,6 @@ const timeline = [
     .map((p) => ({ when: batchFromMade(p.data.made), what: p.data.title, next: false })),
   ...products.filter((p) => !p.data.made).map((p) => ({ when: 'NEXT UP', what: p.data.title, next: true })),
 ];
-
-const questions = [
-  'Favourite jar on the shelf?',
-  'The first thing she ever preserved?',
-  'Best spoonful of jam, and with what?',
-  'What goes into the gin next?',
-];
-
-const recipes = await getCollection('recipes');
-const firstRecipe = recipes[0];
 ---
 
 <Base title="Old Ma Main's: small batch preserves" footerNav>
@@ -41,7 +30,6 @@ const firstRecipe = recipes[0];
         </p>
         <div class="btn-row">
           <a href="#range" class="btn btn--solid">SEE THE RANGE</a>
-          <a href="#about" class="btn">MEET OLD MA</a>
         </div>
       </div>
       <div class="hero-label">
@@ -65,10 +53,6 @@ const firstRecipe = recipes[0];
           ))
         }
       </div>
-      <div class="boxed order">
-        <p class="eyebrow">WANT A JAR?</p>
-        <p class="order-how">[HOW TO ORDER: market stall, email address or shop link]</p>
-      </div>
     </section>
 
     <section id="year" class="container block">
@@ -86,59 +70,6 @@ const firstRecipe = recipes[0];
           ))
         }
       </ol>
-    </section>
-
-    <section id="about" class="ink-band">
-      <div class="container about">
-        <div class="portrait">
-          <p class="eyebrow">[PHOTO OF OLD MA]</p>
-        </div>
-        <div class="stack about-copy">
-          <p class="eyebrow">MEET OLD MA MAIN</p>
-          <h2 class="section-title">[HER STORY IN ONE LINE]</h2>
-          <p class="prose-width">[TWO OR THREE SENTENCES ABOUT HER: where she lives, and why she started making preserves]</p>
-          <div class="ruled-grid">
-            {
-              questions.map((q) => (
-                <div class="ruled-item fine">
-                  <p>{q}</p>
-                  <p>[HER ANSWER]</p>
-                </div>
-              ))
-            }
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section id="kitchen" class="container block block--roomy">
-      <div class="section-head">
-        <p class="eyebrow">THE KITCHEN</p>
-        <h2 class="section-title">Journal and recipes</h2>
-      </div>
-      <div class="cards">
-        <div class="double-frame card">
-          <div class="stack card-inner">
-            <p class="eyebrow">JOURNAL</p>
-            <h3>What is in season and what is in the pot</h3>
-            <p>Short posts, written when there is something to say. [FIRST POST TITLE] is on its way.</p>
-          </div>
-        </div>
-        <div class="double-frame card">
-          <div class="stack card-inner">
-            <p class="eyebrow">RECIPES</p>
-            <h3>A recipe for every jar, gathered into a book</h3>
-            <p>Each recipe is saved to the recipe book. One day the book will be printed.</p>
-            {
-              firstRecipe && (
-                <a href={href(`/recipes/${firstRecipe.id}/`)} class="text-link">
-                  OPEN A RECIPE
-                </a>
-              )
-            }
-          </div>
-        </div>
-      </div>
     </section>
 
     <section class="container cta-wrap">
@@ -215,18 +146,6 @@ const firstRecipe = recipes[0];
     line-height: 1.5;
   }
 
-  .order {
-    padding: 20px 24px;
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 8px 24px;
-  }
-
-  .order-how {
-    flex: 1 1 260px;
-  }
-
   /* timeline */
   .timeline {
     list-style: none;
@@ -255,64 +174,6 @@ const firstRecipe = recipes[0];
     font-weight: 700;
     font-size: 16px;
     letter-spacing: 0.06em;
-  }
-
-  /* about */
-  .about {
-    padding-block: clamp(40px, 7vw, 80px);
-    display: flex;
-    flex-wrap: wrap;
-    gap: 48px;
-  }
-
-  .portrait {
-    flex: 1 1 280px;
-    max-width: 440px;
-    min-width: 0;
-    aspect-ratio: 4 / 5;
-    border: var(--rule-fine) solid var(--paper);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    padding: 24px;
-  }
-
-  .about-copy {
-    flex: 1 1 380px;
-    min-width: 0;
-    gap: 24px;
-  }
-
-  .ruled-item.fine {
-    border-top-width: var(--rule-fine);
-  }
-
-  .ruled-item.fine p:first-child {
-    line-height: 1.4;
-  }
-
-  /* kitchen */
-  .cards {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 24px;
-  }
-
-  .card {
-    flex: 1 1 400px;
-    min-width: 0;
-  }
-
-  .card-inner {
-    padding: 24px;
-    gap: 12px;
-    align-items: flex-start;
-  }
-
-  .card-inner h3 {
-    font-size: 26px;
-    line-height: 1.2;
   }
 
   /* label maker call to action */

@@ -1,6 +1,7 @@
 ---
 import type { GetStaticPaths } from 'astro';
-import { getCollection, getEntry, render } from 'astro:content';
+import { getEntry, render } from 'astro:content';
+import { getRecipes } from '../../lib/recipes';
 import Base from '../../layouts/Base.astro';
 import Label from '../../components/Label.astro';
 import RecipeBookCover from '../../components/RecipeBookCover.astro';
@@ -9,7 +10,7 @@ import { batchFromMade } from '../../lib/label';
 import { href } from '../../lib/url';
 
 export const getStaticPaths = (async () => {
-  const recipes = await getCollection('recipes');
+  const recipes = await getRecipes();
   return recipes.map((recipe) => ({ params: { slug: recipe.id }, props: { recipe } }));
 }) satisfies GetStaticPaths;
 

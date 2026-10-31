@@ -16,7 +16,7 @@ npm run preview  # serve the built site
 | Path | What |
 | --- | --- |
 | `src/data/products.json` | The range: one entry per product (label wording, batch month as `YYYY-MM`, omit `made` for "coming soon"). Drives the home page shelf, the "year in jars" timeline and the label maker presets. |
-| `src/content/recipes/*.md` | One recipe per file. Frontmatter holds intro, makes, takes, ingredients and tip; the body is the method as an ordered list. Each gets a page at `/recipes/<file-name>/`. |
+| `src/content/recipes/*.md` | One recipe per file. Frontmatter holds intro, makes, takes, ingredients and tip; the body is the method as an ordered list. Each gets a page at `/recipes/<file-name>/`. Set `draft: true` to keep one unpublished; THE KITCHEN appears in the nav once at least one recipe is published. |
 | `src/lib/label.ts` | The jar label, drawn as one SVG. Used at build time and in the browser (label maker preview, PNG download, 3 × 4 A4 PDF and print sheet). Product names are always 40px, the SEVILLE ORANGE / MARMALADE size; lines over 14 letters get a "shorten the wording" warning. |
 | `public/baskets/*.svg` | The engraved baskets from the design system (oranges, quinces, strawberries, elderflowers, crab apples). A product picks one with `basket` in `products.json`. |
 | `src/styles/global.css` | Design tokens (paper, ink, rules, fonts) and shared patterns. |

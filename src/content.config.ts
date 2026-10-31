@@ -36,6 +36,8 @@ const recipes = defineCollection({
     takes: z.string(),
     ingredients: z.array(z.string()).min(1),
     tip: z.string(),
+    /** Drafts are not built or linked anywhere. */
+    draft: z.boolean().default(false),
   }),
 });
 
