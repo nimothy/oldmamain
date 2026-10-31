@@ -10,11 +10,11 @@ interface Props extends LabelText {
   class?: string;
 }
 
-const { line1, line2, batch, phrase, maxWidth = 512, decorative = false, id, class: className } = Astro.props;
+const { line1, line2, batch, phrase, basket, maxWidth = 512, decorative = false, id, class: className } = Astro.props;
 
 // Unique ids for the SVG's pattern and arc, since a page can hold several labels.
 const idPrefix = `label-${Math.random().toString(36).slice(2, 8)}`;
-const svg = renderLabelSvg({ line1, line2, batch, phrase }, { idPrefix, accessible: !decorative });
+const svg = renderLabelSvg({ line1, line2, batch, phrase, basket }, { idPrefix, accessible: !decorative });
 ---
 
 <div

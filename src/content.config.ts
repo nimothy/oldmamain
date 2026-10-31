@@ -1,6 +1,7 @@
 import { defineCollection, reference } from 'astro:content';
 import { file, glob } from 'astro/loaders';
 import { z } from 'astro/zod';
+import { BASKETS } from './lib/label';
 
 /** Everything on the larder shelf: one entry per product, in display order. */
 const products = defineCollection({
@@ -14,6 +15,8 @@ const products = defineCollection({
     line1: z.string(),
     line2: z.string().default(''),
     phrase: z.string(),
+    /** Engraved basket on the label: one of the design system's baskets. */
+    basket: z.enum(BASKETS.map((b) => b.id) as [string, ...string[]]),
     /** Month the latest batch was made, as YYYY-MM. Omit for products not made yet. */
     made: z
       .string()

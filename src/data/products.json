@@ -8,6 +8,7 @@
     "line1": "Seville orange",
     "line2": "Marmalade",
     "phrase": "Hand cut peel",
+    "basket": "oranges",
     "made": "2026-01"
   },
   {
@@ -19,6 +20,7 @@
     "line1": "Quince",
     "line2": "Jelly",
     "phrase": "Drip strained",
+    "basket": "quinces",
     "made": "2025-09"
   },
   {
@@ -30,6 +32,7 @@
     "line1": "Strawberry",
     "line2": "Jam",
     "phrase": "Small batch",
+    "basket": "strawberries",
     "made": "2026-08"
   },
   {
@@ -40,7 +43,8 @@
     "note": "Elderflowers, picked from the hedgerow. Not made yet.",
     "line1": "Elderflower",
     "line2": "Cordial",
-    "phrase": "Hedgerow picked"
+    "phrase": "Hedgerow picked",
+    "basket": "elderflowers"
   },
   {
     "id": "moonshine",
@@ -51,6 +55,7 @@
     "line1": "Moonshine",
     "line2": "",
     "phrase": "Local crab apples",
+    "basket": "crab-apples",
     "made": "2026-10"
   }
 ]

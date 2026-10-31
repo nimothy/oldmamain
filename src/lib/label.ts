@@ -15,12 +15,36 @@ export const FELL = "'IM Fell English SC', 'Libre Caslon Text', Georgia, serif";
 export const LABEL_WIDTH = 512;
 export const LABEL_HEIGHT = 720;
 
-/** Product lines are allowed to span 70% of the label. */
-const PRODUCT_MAX_WIDTH = 358;
-/** Approximate glyph width of Caslon capitals, as a fraction of font size. */
-const CAPS_ADVANCE = 0.64;
-/** Below this size, a product name no longer fits and should be reworded. */
-export const PRODUCT_MIN_COMFORT = 40;
+/**
+ * Every product name is set at one size: the size SEVILLE ORANGE / MARMALADE
+ * needs to fit (the design system's `product-long`, 40px on a 512px label).
+ */
+export const PRODUCT_SIZE = 40;
+/** Longest product line, in characters, that fits at PRODUCT_SIZE: SEVILLE ORANGE. */
+export const PRODUCT_MAX_CHARS = 14;
+
+/** The engraved baskets from the design system, one per fruit or flower. */
+export const BASKETS = [
+  { id: 'oranges', name: 'Seville oranges' },
+  { id: 'quinces', name: 'Quinces' },
+  { id: 'strawberries', name: 'Strawberries' },
+  { id: 'elderflowers', name: 'Elderflowers' },
+  { id: 'crab-apples', name: 'Crab apples' },
+] as const;
+
+export type BasketId = (typeof BASKETS)[number]['id'];
+
+export function isBasketId(id: string | undefined | null): id is BasketId {
+  return BASKETS.some((b) => b.id === id);
+}
+
+/** Public URL of a basket engraving. */
+export function basketUrl(id: BasketId): string {
+  return `${import.meta.env.BASE_URL.replace(/\/$/, '')}/baskets/${id}.svg`;
+}
+
+/** Basket artwork is 526 × 416; it sits between the laurels, above the product name. */
+const BASKET_BOX = { x: 154, y: 150, w: 204, h: Math.round((204 * 416) / 526) };
 
 export interface LabelText {
   line1: string;
@@ -29,6 +53,8 @@ export interface LabelText {
   batch: string;
   /** Short phrase unique to the product; MADE WITH LOVE is appended. */
   phrase?: string;
+  /** Which engraved basket to show. Omit for the plain placeholder. */
+  basket?: BasketId;
 }
 
 const clean = (s: string | undefined | null) => String(s ?? '').trim().toUpperCase();
@@ -40,10 +66,9 @@ export function productLines(text: Pick<LabelText, 'line1' | 'line2'>): string[]
   return [clean(text.line1), clean(text.line2)].filter(Boolean);
 }
 
-/** True when the longest product line would need to shrink below the comfortable minimum. */
+/** True when a product line is too long to fit inside the frame at the standard size. */
 export function isTooLong(text: Pick<LabelText, 'line1' | 'line2'>): boolean {
-  const longest = Math.max(1, ...productLines(text).map((l) => l.length));
-  return PRODUCT_MAX_WIDTH / (longest * CAPS_ADVANCE) < PRODUCT_MIN_COMFORT;
+  return productLines(text).some((l) => l.length > PRODUCT_MAX_CHARS);
 }
 
 export function tagline(phrase: string | undefined): string {
@@ -65,6 +90,8 @@ export interface LabelSvgOptions {
   height?: number;
   /** Accessible mode: role="img" with an aria-label. Off for decorative copies. */
   accessible?: boolean;
+  /** Override the basket image URL, e.g. a data: URI so exports are self-contained. */
+  basketHref?: string;
 }
 
 /** Vertical offset from a line's centre to its baseline, for all-capitals text. */
@@ -73,8 +100,7 @@ const capsBaseline = (size: number) => size * 0.34;
 export function renderLabelSvg(text: LabelText, opts: LabelSvgOptions = {}): string {
   const id = opts.idPrefix ?? 'oldma';
   const lines = productLines(text);
-  const longest = Math.max(1, ...lines.map((l) => l.length));
-  const prodPx = Math.max(26, Math.min(56, PRODUCT_MAX_WIDTH / (longest * CAPS_ADVANCE)));
+  const prodPx = PRODUCT_SIZE;
   const lineHeight = prodPx * 1.08;
 
   const batch = clean(text.batch);
@@ -92,6 +118,13 @@ export function renderLabelSvg(text: LabelText, opts: LabelSvgOptions = {}): str
       return `<text x="256" y="${y.toFixed(1)}" text-anchor="middle" font-family="${CASLON}" font-weight="700" font-size="${prodPx.toFixed(1)}" fill="${INK}">${escapeXml(line)}</text>`;
     })
     .join('');
+
+  const basketHref = opts.basketHref ?? (text.basket ? basketUrl(text.basket) : undefined);
+  const illustration = basketHref
+    ? `<image href="${escapeXml(basketHref)}" x="${BASKET_BOX.x}" y="${BASKET_BOX.y}" width="${BASKET_BOX.w}" height="${BASKET_BOX.h}" preserveAspectRatio="xMidYMid meet"/>`
+    : `<rect x="171" y="150" width="170" height="170" fill="url(#${id}-hatch)" stroke="${INK}" stroke-width="2.5"/>
+<rect x="196" y="213" width="120" height="44" fill="${PAPER}" stroke="${INK}" stroke-width="2.5"/>
+<text x="256" y="241" text-anchor="middle" font-family="${FELL}" font-size="15" letter-spacing="1.5" fill="${INK}">BASKET</text>`;
 
   const size =
     opts.width && opts.height ? ` width="${opts.width}" height="${opts.height}"` : ' width="100%" height="100%"';
@@ -116,9 +149,7 @@ ${opts.extraDefs ?? ''}
 <text font-family="${CASLON}" font-weight="700" font-size="46" letter-spacing="1" fill="${INK}"><textPath href="#${id}-arc" startOffset="50%" text-anchor="middle">OLD MA MAIN'S</textPath></text>
 <path d="M 150 175 Q 118 235 150 300" fill="none" stroke="${INK}" stroke-width="2.5"/>
 <path d="M 362 175 Q 394 235 362 300" fill="none" stroke="${INK}" stroke-width="2.5"/>
-<rect x="171" y="150" width="170" height="170" fill="url(#${id}-hatch)" stroke="${INK}" stroke-width="2.5"/>
-<rect x="196" y="213" width="120" height="44" fill="${PAPER}" stroke="${INK}" stroke-width="2.5"/>
-<text x="256" y="241" text-anchor="middle" font-family="${FELL}" font-size="15" letter-spacing="1.5" fill="${INK}">BASKET</text>
+${illustration}
 <polygon points="76,495 436,495 418,530 436,565 76,565 94,530" fill="${PAPER}" stroke="${INK}" stroke-width="2.5"/>
 ${productText}
 <text x="256" y="${(530 + capsBaseline(batchPx)).toFixed(1)}" text-anchor="middle" font-family="${CASLON}" font-weight="700" font-size="${batchPx.toFixed(1)}" letter-spacing="${(batchPx * 0.04).toFixed(2)}" fill="${INK}">${escapeXml(batch)}</text>
@@ -147,3 +178,19 @@ export function batchFromMade(made: string | undefined, fallback = 'COMING SOON'
   const [year, month] = made.split('-');
   return `${MONTHS[Number(month) - 1]} ${year}`.toUpperCase();
 }
+
+/**
+ * A full A4 sheet of labels: 3 columns × 4 rows, used by both the PDF
+ * download and the browser's print sheet. Millimetres.
+ */
+export const SHEET = (() => {
+  const page = { w: 210, h: 297 };
+  const cols = 3;
+  const rows = 4;
+  const gap = 4;
+  const margin = 10;
+  const labelH = (page.h - 2 * margin - (rows - 1) * gap) / rows;
+  const labelW = (labelH * LABEL_WIDTH) / LABEL_HEIGHT;
+  const left = (page.w - cols * labelW - (cols - 1) * gap) / 2;
+  return { page, cols, rows, gap, margin, labelW, labelH, left };
+})();

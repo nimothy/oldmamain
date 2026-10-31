@@ -1,5 +1,5 @@
 import { getCollection, type CollectionEntry } from 'astro:content';
-import { batchFromMade, type LabelText } from './label';
+import { batchFromMade, isBasketId, type LabelText } from './label';
 
 export type Product = CollectionEntry<'products'>;
 
@@ -14,5 +14,6 @@ export function productLabel(p: Product): LabelText {
     line2: p.data.line2,
     batch: batchFromMade(p.data.made),
     phrase: p.data.phrase,
+    basket: isBasketId(p.data.basket) ? p.data.basket : undefined,
   };
 }

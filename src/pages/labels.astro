@@ -2,7 +2,7 @@
 import Base from '../layouts/Base.astro';
 import Label from '../components/Label.astro';
 import { getProducts } from '../lib/products';
-import { MONTHS, isTooLong } from '../lib/label';
+import { BASKETS, MONTHS, PRODUCT_MAX_CHARS, SHEET, isBasketId, isTooLong } from '../lib/label';
 
 const products = await getProducts();
 
@@ -16,17 +16,29 @@ const presets = [
       line1: p.data.line1.toUpperCase(),
       line2: p.data.line2.toUpperCase(),
       phrase: p.data.phrase.toUpperCase(),
+      basket: p.data.basket as string | null,
       month: month ? MONTHS[Number(month) - 1] : null,
       year: year ?? null,
     };
   }),
-  { id: 'new', label: 'New product', line1: 'YOUR PRODUCT', line2: '', phrase: 'YOUR PHRASE HERE', month: null, year: null },
+  {
+    id: 'new',
+    label: 'New product',
+    line1: 'YOUR PRODUCT',
+    line2: '',
+    phrase: 'YOUR PHRASE HERE',
+    basket: null,
+    month: null,
+    year: null,
+  },
 ];
 
 const start = presets.find((p) => p.id === 'strawberry-jam') ?? presets[0];
 const startMonth = start.month ?? 'August';
 const startYear = start.year ?? '2026';
 const startBatch = `${startMonth} ${startYear}`.toUpperCase();
+const startBasket = isBasketId(start.basket) ? start.basket : undefined;
+const perSheet = SHEET.cols * SHEET.rows;
 ---
 
 <Base title="Label maker · Old Ma Main's" current="labels" description="Make a jar label in the Old Ma Main's style.">
@@ -48,6 +60,7 @@ const startBatch = `${startMonth} ${startYear}`.toUpperCase();
           line2={start.line2}
           batch={startBatch}
           phrase={start.phrase}
+          basket={startBasket}
         />
       </div>
 
@@ -84,8 +97,16 @@ const startBatch = `${startMonth} ${startYear}`.toUpperCase();
 
           <div role="status" class="warning-region">
             <p id="too-long" class="boxed warning" hidden={!isTooLong(start)}>
-              That name is too long to sit inside the frame. Shorten the wording.
+              That name is too long to sit inside the frame. Keep each line to {PRODUCT_MAX_CHARS} letters or fewer.
             </p>
+          </div>
+
+          <div class="field">
+            <label for="basket">BASKET</label>
+            <select id="basket" name="basket">
+              {BASKETS.map((b) => <option value={b.id} selected={b.id === startBasket}>{b.name}</option>)}
+              <option value="" selected={!startBasket}>No basket yet</option>
+            </select>
           </div>
 
           <div class="row">
@@ -109,9 +130,13 @@ const startBatch = `${startMonth} ${startYear}`.toUpperCase();
 
           <div class="btn-row">
             <button type="button" id="download" class="btn btn--solid">DOWNLOAD PNG</button>
+            <button type="button" id="download-pdf" class="btn">DOWNLOAD PDF</button>
             <button type="button" id="print" class="btn">PRINT A SHEET</button>
           </div>
-          <p class="hint">Home printers turn the brown ink near-black. That is fine.</p>
+          <p class="hint">
+            The PDF and the printed sheet hold {perSheet} labels on one A4 page, {SHEET.cols} across and {SHEET.rows} down.
+            Home printers turn the brown ink near-black. That is fine.
+          </p>
         </form>
       </div>
     </div>
@@ -128,21 +153,39 @@ const startBatch = `${startMonth} ${startYear}`.toUpperCase();
           <p>The batch line says when it was made. Never a best before date.</p>
         </div>
         <div class="ruled-item">
-          <p>Names that fit</p>
-          <p>Long names shrink to fit. If they still do not, shorten the wording.</p>
+          <p>One size of name</p>
+          <p>Every name is set at the size of SEVILLE ORANGE MARMALADE. If a name does not fit, shorten the wording.</p>
         </div>
       </div>
     </section>
   </main>
 
-  <!-- Only shown when printing: a sheet of four labels. -->
-  <div id="print-sheet" class="print-sheet" aria-hidden="true"></div>
+  <!-- Only shown when printing: a full A4 sheet of labels. -->
+  <div
+    id="print-sheet"
+    class="print-sheet"
+    aria-hidden="true"
+    data-count={perSheet}
+    style={`--sheet-cols: ${SHEET.cols}; --sheet-gap: ${SHEET.gap}mm; --sheet-margin: ${SHEET.margin}mm; --label-w: ${SHEET.labelW}mm; --label-h: ${SHEET.labelH}mm;`}
+  >
+  </div>
 
   <script type="application/json" id="label-presets" set:html={JSON.stringify(presets)} />
 </Base>
 
 <script>
-  import { renderLabelSvg, isTooLong, MONTHS, type LabelText } from '../lib/label';
+  import { jsPDF } from 'jspdf';
+  import {
+    renderLabelSvg,
+    isTooLong,
+    isBasketId,
+    basketUrl,
+    MONTHS,
+    SHEET,
+    LABEL_WIDTH,
+    LABEL_HEIGHT,
+    type LabelText,
+  } from '../lib/label';
   import caslon400 from '@fontsource/libre-caslon-text/files/libre-caslon-text-latin-400-normal.woff2?url';
   import caslon700 from '@fontsource/libre-caslon-text/files/libre-caslon-text-latin-700-normal.woff2?url';
   import fell400 from '@fontsource/im-fell-english-sc/files/im-fell-english-sc-latin-400-normal.woff2?url';
@@ -152,6 +195,7 @@ const startBatch = `${startMonth} ${startYear}`.toUpperCase();
     line1: string;
     line2: string;
     phrase: string;
+    basket: string | null;
     month: string | null;
     year: string | null;
   };
@@ -165,6 +209,7 @@ const startBatch = `${startMonth} ${startYear}`.toUpperCase();
   const inputs = {
     line1: $<HTMLInputElement>('line1'),
     line2: $<HTMLInputElement>('line2'),
+    basket: $<HTMLSelectElement>('basket'),
     month: $<HTMLSelectElement>('month'),
     year: $<HTMLInputElement>('year'),
     phrase: $<HTMLInputElement>('phrase'),
@@ -177,6 +222,7 @@ const startBatch = `${startMonth} ${startYear}`.toUpperCase();
       line2: inputs.line2.value,
       batch: `${inputs.month.value} ${inputs.year.value}`,
       phrase: inputs.phrase.value,
+      basket: isBasketId(inputs.basket.value) ? inputs.basket.value : undefined,
     };
   }
 
@@ -193,6 +239,7 @@ const startBatch = `${startMonth} ${startYear}`.toUpperCase();
     inputs.line1.value = p.line1;
     inputs.line2.value = p.line2;
     inputs.phrase.value = p.phrase;
+    inputs.basket.value = p.basket ?? '';
     inputs.month.value = p.month ?? MONTHS[now.getMonth()];
     inputs.year.value = p.year ?? String(now.getFullYear());
     for (const b of presetButtons) b.setAttribute('aria-pressed', String(b.dataset.preset === id));
@@ -200,11 +247,14 @@ const startBatch = `${startMonth} ${startYear}`.toUpperCase();
   }
 
   for (const b of presetButtons) b.addEventListener('click', () => pickPreset(b.dataset.preset!));
-  for (const el of Object.values(inputs)) el.addEventListener('input', render);
+  for (const el of Object.values(inputs)) {
+    el.addEventListener('input', render);
+    el.addEventListener('change', render);
+  }
 
-  // ---- download PNG ----
+  // ---- exports: everything embedded, so the label needs nothing from the network ----
 
-  async function fontAsDataUrl(url: string): Promise<string> {
+  async function asDataUrl(url: string): Promise<string> {
     const blob = await (await fetch(url)).blob();
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -216,7 +266,7 @@ const startBatch = `${startMonth} ${startYear}`.toUpperCase();
 
   let embeddedFonts: Promise<string> | undefined;
   function fontFaces(): Promise<string> {
-    embeddedFonts ??= Promise.all([caslon400, caslon700, fell400].map(fontAsDataUrl)).then(
+    embeddedFonts ??= Promise.all([caslon400, caslon700, fell400].map(asDataUrl)).then(
       ([c4, c7, f4]) => `<style>
 @font-face{font-family:'Libre Caslon Text';font-weight:400;src:url(${c4}) format('woff2')}
 @font-face{font-family:'Libre Caslon Text';font-weight:700;src:url(${c7}) format('woff2')}
@@ -226,30 +276,27 @@ const startBatch = `${startMonth} ${startYear}`.toUpperCase();
     return embeddedFonts;
   }
 
-  function fileName(text: LabelText) {
-    const slug = [text.line1, text.line2, text.batch]
-      .join(' ')
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-|-$/g, '');
-    return `old-ma-mains-${slug || 'label'}.png`;
+  const embeddedBaskets = new Map<string, Promise<string>>();
+  function basketAsDataUrl(text: LabelText): Promise<string | undefined> {
+    if (!text.basket) return Promise.resolve(undefined);
+    const url = basketUrl(text.basket);
+    if (!embeddedBaskets.has(url)) embeddedBaskets.set(url, asDataUrl(url));
+    return embeddedBaskets.get(url)!;
   }
 
-  async function downloadPng(button: HTMLButtonElement) {
-    const scale = 3; // 1536 × 2160, plenty for print
-    const text = current();
-    const original = button.textContent;
-    button.disabled = true;
-    button.textContent = 'PREPARING…';
+  /** Draw the label onto a canvas at `scale` × its 512 × 720 size. */
+  async function rasterise(text: LabelText, scale: number): Promise<HTMLCanvasElement> {
+    const [fonts, basketHref] = await Promise.all([fontFaces(), basketAsDataUrl(text)]);
+    const svg = renderLabelSvg(text, {
+      idPrefix: 'export',
+      width: LABEL_WIDTH * scale,
+      height: LABEL_HEIGHT * scale,
+      extraDefs: fonts,
+      basketHref,
+    });
+    const img = new Image();
+    const url = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }));
     try {
-      const svg = renderLabelSvg(text, {
-        idPrefix: 'png',
-        width: 512 * scale,
-        height: 720 * scale,
-        extraDefs: await fontFaces(),
-      });
-      const img = new Image();
-      const url = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }));
       await new Promise<void>((resolve, reject) => {
         img.onload = () => resolve();
         img.onerror = () => reject(new Error('Could not draw the label'));
@@ -258,35 +305,81 @@ const startBatch = `${startMonth} ${startYear}`.toUpperCase();
       // Give the browser a beat to apply the embedded fonts before rasterising.
       await new Promise((r) => setTimeout(r, 50));
       const canvas = document.createElement('canvas');
-      canvas.width = 512 * scale;
-      canvas.height = 720 * scale;
+      canvas.width = LABEL_WIDTH * scale;
+      canvas.height = LABEL_HEIGHT * scale;
       canvas.getContext('2d')!.drawImage(img, 0, 0);
-      URL.revokeObjectURL(url);
-      const png = await new Promise<Blob | null>((r) => canvas.toBlob(r, 'image/png'));
-      if (!png) throw new Error('Could not make the PNG');
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(png);
-      a.download = fileName(text);
-      a.click();
-      setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-    } catch (err) {
-      console.error(err);
-      alert('Sorry, the label could not be saved as a PNG in this browser. Try printing a sheet instead.');
+      return canvas;
     } finally {
-      button.disabled = false;
-      button.textContent = original;
+      URL.revokeObjectURL(url);
     }
   }
 
-  const downloadButton = $<HTMLButtonElement>('download');
-  downloadButton.addEventListener('click', () => downloadPng(downloadButton));
+  function fileName(text: LabelText, ext: string) {
+    const slug = [text.line1, text.line2, text.batch]
+      .join(' ')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '');
+    return `old-ma-mains-${slug || 'label'}.${ext}`;
+  }
 
-  // ---- print a sheet ----
+  function save(blob: Blob, name: string) {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  }
+
+  /** Wire an export button: progress on the button, a plain message if it fails. */
+  function exporter(button: HTMLButtonElement, what: string, run: (text: LabelText) => Promise<void>) {
+    button.addEventListener('click', async () => {
+      const original = button.textContent;
+      button.disabled = true;
+      button.textContent = 'PREPARING…';
+      try {
+        await run(current());
+      } catch (err) {
+        console.error(err);
+        alert(`Sorry, the ${what} could not be made in this browser. Try printing a sheet instead.`);
+      } finally {
+        button.disabled = false;
+        button.textContent = original;
+      }
+    });
+  }
+
+  // One label at 1536 × 2160: plenty for print.
+  exporter($<HTMLButtonElement>('download'), 'PNG', async (text) => {
+    const canvas = await rasterise(text, 3);
+    const png = await new Promise<Blob | null>((r) => canvas.toBlob(r, 'image/png'));
+    if (!png) throw new Error('Could not make the PNG');
+    save(png, fileName(text, 'png'));
+  });
+
+  // A full A4 page of the same label, 3 across and 4 down.
+  exporter($<HTMLButtonElement>('download-pdf'), 'PDF', async (text) => {
+    const canvas = await rasterise(text, 2); // 1024 × 1440: about 550 dpi at sheet size
+    const image = canvas.toDataURL('image/png');
+    const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+    pdf.setProperties({ title: `Old Ma Main's labels: ${[text.line1, text.line2].filter(Boolean).join(' ')}` });
+    for (let row = 0; row < SHEET.rows; row++) {
+      for (let col = 0; col < SHEET.cols; col++) {
+        const x = SHEET.left + col * (SHEET.labelW + SHEET.gap);
+        const y = SHEET.margin + row * (SHEET.labelH + SHEET.gap);
+        // One alias for every cell, so the image is stored in the PDF once.
+        pdf.addImage(image, 'PNG', x, y, SHEET.labelW, SHEET.labelH, 'label', 'FAST');
+      }
+    }
+    save(pdf.output('blob'), fileName(text, 'pdf'));
+  });
+
+  // ---- print a sheet: the same 3 × 4 grid, through the browser ----
 
   function fillSheet() {
     const text = current();
     sheet.innerHTML = Array.from(
-      { length: 4 },
+      { length: Number(sheet.dataset.count) || 12 },
       (_, i) => `<div class="sheet-label">${renderLabelSvg(text, { idPrefix: `sheet${i}`, accessible: false })}</div>`,
     ).join('');
   }
@@ -400,27 +493,28 @@ const startBatch = `${startMonth} ${startYear}`.toUpperCase();
     line-height: 1.15;
   }
 
-  /* print sheet: hidden on screen, four labels to an A4 page */
+  /* print sheet: hidden on screen, a full A4 page of labels when printing */
   .print-sheet {
     display: none;
   }
 
   @page {
     size: A4;
-    margin: 12mm;
+    margin: 0;
   }
 
   @media print {
     .print-sheet {
       display: grid;
-      grid-template-columns: repeat(2, 86mm);
-      gap: 8mm;
+      grid-template-columns: repeat(var(--sheet-cols), var(--label-w));
+      gap: var(--sheet-gap);
       justify-content: center;
+      padding-top: var(--sheet-margin);
     }
 
     .print-sheet :global(.sheet-label) {
-      width: 86mm;
-      height: calc(86mm * 720 / 512);
+      width: var(--label-w);
+      height: var(--label-h);
       break-inside: avoid;
     }
   }
