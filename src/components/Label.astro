@@ -2,7 +2,7 @@
 import { renderLabelSvg, type LabelText } from '../lib/label';
 
 interface Props extends LabelText {
-  /** Max rendered width in px; the label keeps its 512:720 proportion. */
+  /** Max rendered width in px; the label keeps its 2:3 proportion. */
   maxWidth?: number;
   /** Decorative copies are hidden from assistive tech. */
   decorative?: boolean;
@@ -28,6 +28,6 @@ const svg = renderLabelSvg({ line1, line2, batch, phrase, basket }, { idPrefix, 
   .label {
     width: 100%;
     max-width: var(--label-max);
-    aspect-ratio: 512 / 720;
+    aspect-ratio: 2 / 3;
   }
 </style>

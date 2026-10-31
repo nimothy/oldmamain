@@ -2,7 +2,7 @@
 import Base from '../layouts/Base.astro';
 import Label from '../components/Label.astro';
 import { getProducts } from '../lib/products';
-import { BASKETS, MONTHS, PRODUCT_MAX_CHARS, SHEET, isBasketId, isTooLong } from '../lib/label';
+import { BASKETS, DEFAULT_BASKET, MONTHS, PRODUCT_MAX_CHARS, SHEET, isBasketId, isTooLong } from '../lib/label';
 
 const products = await getProducts();
 
@@ -27,7 +27,7 @@ const presets = [
     line1: 'YOUR PRODUCT',
     line2: '',
     phrase: 'YOUR PHRASE HERE',
-    basket: null,
+    basket: DEFAULT_BASKET as string | null,
     month: null,
     year: null,
   },
@@ -37,7 +37,7 @@ const start = presets.find((p) => p.id === 'strawberry-jam') ?? presets[0];
 const startMonth = start.month ?? 'August';
 const startYear = start.year ?? '2026';
 const startBatch = `${startMonth} ${startYear}`.toUpperCase();
-const startBasket = isBasketId(start.basket) ? start.basket : undefined;
+const startBasket = isBasketId(start.basket) ? start.basket : DEFAULT_BASKET;
 const perSheet = SHEET.cols * SHEET.rows;
 ---
 
@@ -105,7 +105,6 @@ const perSheet = SHEET.cols * SHEET.rows;
             <label for="basket">BASKET</label>
             <select id="basket" name="basket">
               {BASKETS.map((b) => <option value={b.id} selected={b.id === startBasket}>{b.name}</option>)}
-              <option value="" selected={!startBasket}>No basket yet</option>
             </select>
           </div>
 
@@ -180,6 +179,8 @@ const perSheet = SHEET.cols * SHEET.rows;
     isTooLong,
     isBasketId,
     basketUrl,
+    ORNAMENTS,
+    DEFAULT_BASKET,
     MONTHS,
     SHEET,
     LABEL_WIDTH,
@@ -222,7 +223,7 @@ const perSheet = SHEET.cols * SHEET.rows;
       line2: inputs.line2.value,
       batch: `${inputs.month.value} ${inputs.year.value}`,
       phrase: inputs.phrase.value,
-      basket: isBasketId(inputs.basket.value) ? inputs.basket.value : undefined,
+      basket: isBasketId(inputs.basket.value) ? inputs.basket.value : DEFAULT_BASKET,
     };
   }
 
@@ -239,7 +240,7 @@ const perSheet = SHEET.cols * SHEET.rows;
     inputs.line1.value = p.line1;
     inputs.line2.value = p.line2;
     inputs.phrase.value = p.phrase;
-    inputs.basket.value = p.basket ?? '';
+    inputs.basket.value = p.basket ?? DEFAULT_BASKET;
     inputs.month.value = p.month ?? MONTHS[now.getMonth()];
     inputs.year.value = p.year ?? String(now.getFullYear());
     for (const b of presetButtons) b.setAttribute('aria-pressed', String(b.dataset.preset === id));
@@ -276,23 +277,28 @@ const perSheet = SHEET.cols * SHEET.rows;
     return embeddedFonts;
   }
 
-  const embeddedBaskets = new Map<string, Promise<string>>();
-  function basketAsDataUrl(text: LabelText): Promise<string | undefined> {
-    if (!text.basket) return Promise.resolve(undefined);
-    const url = basketUrl(text.basket);
-    if (!embeddedBaskets.has(url)) embeddedBaskets.set(url, asDataUrl(url));
-    return embeddedBaskets.get(url)!;
+  /** Images fetched once and kept as data: URIs. */
+  const embedded = new Map<string, Promise<string>>();
+  function embed(url: string): Promise<string> {
+    if (!embedded.has(url)) embedded.set(url, asDataUrl(url));
+    return embedded.get(url)!;
   }
 
-  /** Draw the label onto a canvas at `scale` × its 512 × 720 size. */
-  async function rasterise(text: LabelText, scale: number): Promise<HTMLCanvasElement> {
-    const [fonts, basketHref] = await Promise.all([fontFaces(), basketAsDataUrl(text)]);
+  /** Draw the label onto a canvas `width` pixels wide (height follows at 2:3). */
+  async function rasterise(text: LabelText, width: number): Promise<HTMLCanvasElement> {
+    const height = Math.round((width * LABEL_HEIGHT) / LABEL_WIDTH);
+    const [fonts, basket, corner, laurel] = await Promise.all([
+      fontFaces(),
+      embed(basketUrl(text.basket ?? DEFAULT_BASKET)),
+      embed(ORNAMENTS.corner),
+      embed(ORNAMENTS.laurel),
+    ]);
     const svg = renderLabelSvg(text, {
       idPrefix: 'export',
-      width: LABEL_WIDTH * scale,
-      height: LABEL_HEIGHT * scale,
+      width,
+      height,
       extraDefs: fonts,
-      basketHref,
+      hrefs: { basket, corner, laurel },
     });
     const img = new Image();
     const url = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }));
@@ -305,8 +311,8 @@ const perSheet = SHEET.cols * SHEET.rows;
       // Give the browser a beat to apply the embedded fonts before rasterising.
       await new Promise((r) => setTimeout(r, 50));
       const canvas = document.createElement('canvas');
-      canvas.width = LABEL_WIDTH * scale;
-      canvas.height = LABEL_HEIGHT * scale;
+      canvas.width = width;
+      canvas.height = height;
       canvas.getContext('2d')!.drawImage(img, 0, 0);
       return canvas;
     } finally {
@@ -349,9 +355,9 @@ const perSheet = SHEET.cols * SHEET.rows;
     });
   }
 
-  // One label at 1536 × 2160: plenty for print.
+  // One label at 1536 × 2304: plenty for print.
   exporter($<HTMLButtonElement>('download'), 'PNG', async (text) => {
-    const canvas = await rasterise(text, 3);
+    const canvas = await rasterise(text, 1536);
     const png = await new Promise<Blob | null>((r) => canvas.toBlob(r, 'image/png'));
     if (!png) throw new Error('Could not make the PNG');
     save(png, fileName(text, 'png'));
@@ -359,7 +365,7 @@ const perSheet = SHEET.cols * SHEET.rows;
 
   // A full A4 page of the same label, 3 across and 4 down.
   exporter($<HTMLButtonElement>('download-pdf'), 'PDF', async (text) => {
-    const canvas = await rasterise(text, 2); // 1024 × 1440: about 550 dpi at sheet size
+    const canvas = await rasterise(text, 1024); // 1024 × 1536: about 590 dpi at sheet size
     const image = canvas.toDataURL('image/png');
     const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
     pdf.setProperties({ title: `Old Ma Main's labels: ${[text.line1, text.line2].filter(Boolean).join(' ')}` });
