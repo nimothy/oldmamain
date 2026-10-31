@@ -1,0 +1,49 @@
+---
+import Nav from './Nav.astro';
+
+interface Props {
+  nav?: boolean;
+  rule?: boolean;
+}
+
+const { nav = false, rule = false } = Astro.props;
+---
+
+<footer class="ink-band" class:list={{ ruled: rule }} data-print="hide">
+  <div class="container inner">
+    <div class="stack brand">
+      <p class="wordmark">OLD MA MAIN'S</p>
+      <p class="fell">SMALL BATCH &bull; MADE WITH LOVE</p>
+    </div>
+    {nav && <Nav label="Footer" />}
+    <p class:list={{ contact: nav }}>[CONTACT DETAILS]</p>
+  </div>
+</footer>
+
+<style>
+  .ruled {
+    border-top: var(--rule-fine) solid var(--paper);
+  }
+
+  .inner {
+    padding-block: 40px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 24px 48px;
+    align-items: flex-start;
+    justify-content: space-between;
+  }
+
+  .brand {
+    gap: 8px;
+  }
+
+  .wordmark {
+    font-size: 28px;
+    line-height: 1.2;
+  }
+
+  .contact {
+    flex: 1 1 100%;
+  }
+</style>

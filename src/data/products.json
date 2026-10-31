@@ -1,0 +1,56 @@
+[
+  {
+    "id": "seville-orange-marmalade",
+    "order": 1,
+    "kind": "Marmalade",
+    "title": "Seville orange marmalade",
+    "note": "Seville oranges, with the peel cut by hand.",
+    "line1": "Seville orange",
+    "line2": "Marmalade",
+    "phrase": "Hand cut peel",
+    "made": "2026-01"
+  },
+  {
+    "id": "quince-jelly",
+    "order": 2,
+    "kind": "Jelly",
+    "title": "Quince jelly",
+    "note": "Quinces, strained by the drip.",
+    "line1": "Quince",
+    "line2": "Jelly",
+    "phrase": "Drip strained",
+    "made": "2025-09"
+  },
+  {
+    "id": "strawberry-jam",
+    "order": 3,
+    "kind": "Jam",
+    "title": "Strawberry jam",
+    "note": "Strawberries, made in small batches.",
+    "line1": "Strawberry",
+    "line2": "Jam",
+    "phrase": "Small batch",
+    "made": "2026-08"
+  },
+  {
+    "id": "elderflower-cordial",
+    "order": 4,
+    "kind": "Cordial",
+    "title": "Elderflower cordial",
+    "note": "Elderflowers, picked from the hedgerow. Not made yet.",
+    "line1": "Elderflower",
+    "line2": "Cordial",
+    "phrase": "Hedgerow picked"
+  },
+  {
+    "id": "moonshine",
+    "order": 5,
+    "kind": "Moonshine",
+    "title": "Moonshine",
+    "note": "Local crab apples steeped in gin. Steeped, not distilled.",
+    "line1": "Moonshine",
+    "line2": "",
+    "phrase": "Local crab apples",
+    "made": "2026-10"
+  }
+]

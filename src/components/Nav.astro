@@ -1,0 +1,54 @@
+---
+import { href } from '../lib/url';
+
+export type NavKey = 'range' | 'kitchen' | 'labels' | 'about';
+
+interface Props {
+  label: string;
+  current?: NavKey;
+}
+
+const { label, current } = Astro.props;
+
+const links: { key: NavKey; text: string; to: string }[] = [
+  { key: 'range', text: 'THE RANGE', to: href('/#range') },
+  { key: 'kitchen', text: 'THE KITCHEN', to: href('/recipes/') },
+  { key: 'labels', text: 'LABELS', to: href('/labels/') },
+  { key: 'about', text: 'ABOUT', to: href('/#about') },
+];
+---
+
+<nav aria-label={label}>
+  {
+    links.map((l) => (
+      <a href={l.to} class="eyebrow" aria-current={current === l.key ? 'page' : undefined}>
+        {l.text}
+      </a>
+    ))
+  }
+</nav>
+
+<style>
+  nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 20px;
+  }
+
+  a {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--tap);
+    text-decoration: none;
+  }
+
+  a[aria-current='page'] {
+    border-bottom: var(--rule-fine) solid currentColor;
+  }
+
+  a:hover {
+    text-decoration: underline;
+    text-decoration-thickness: 1.5px;
+    text-underline-offset: 4px;
+  }
+</style>

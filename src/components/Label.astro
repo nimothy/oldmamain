@@ -1,0 +1,33 @@
+---
+import { renderLabelSvg, type LabelText } from '../lib/label';
+
+interface Props extends LabelText {
+  /** Max rendered width in px; the label keeps its 512:720 proportion. */
+  maxWidth?: number;
+  /** Decorative copies are hidden from assistive tech. */
+  decorative?: boolean;
+  id?: string;
+  class?: string;
+}
+
+const { line1, line2, batch, phrase, maxWidth = 512, decorative = false, id, class: className } = Astro.props;
+
+// Unique ids for the SVG's pattern and arc, since a page can hold several labels.
+const idPrefix = `label-${Math.random().toString(36).slice(2, 8)}`;
+const svg = renderLabelSvg({ line1, line2, batch, phrase }, { idPrefix, accessible: !decorative });
+---
+
+<div
+  class:list={['label', className]}
+  id={id}
+  style={`--label-max: ${maxWidth}px`}
+  set:html={svg}
+/>
+
+<style>
+  .label {
+    width: 100%;
+    max-width: var(--label-max);
+    aspect-ratio: 512 / 720;
+  }
+</style>

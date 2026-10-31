@@ -1,0 +1,78 @@
+---
+import { getCollection, getEntry } from 'astro:content';
+import Base from '../../layouts/Base.astro';
+import Label from '../../components/Label.astro';
+import { productLabel } from '../../lib/products';
+import { href } from '../../lib/url';
+
+const recipes = (await getCollection('recipes')).sort((a, b) => a.data.title.localeCompare(b.data.title));
+const cards = await Promise.all(
+  recipes.map(async (recipe) => ({ recipe, product: await getEntry(recipe.data.product) })),
+);
+---
+
+<Base title="Recipes · Old Ma Main's" current="kitchen" description="Old Ma Main's recipes, one for every jar.">
+  <main class="container page">
+    <div class="stack intro">
+      <p class="eyebrow">THE KITCHEN</p>
+      <h1 class="display">Recipes</h1>
+      <p class="prose-width">A recipe for every jar, gathered into a book. More are added as each batch is made.</p>
+    </div>
+
+    <ul class="grid">
+      {
+        cards.map(({ recipe, product }) => (
+          <li class="double-frame">
+            <a href={href(`/recipes/${recipe.id}/`)} class="stack card">
+              {product && <Label {...productLabel(product)} maxWidth={200} decorative />}
+              <h2>{recipe.data.title}</h2>
+              <span class="text-link">OPEN THE RECIPE</span>
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+  </main>
+</Base>
+
+<style>
+  .page {
+    padding-block: clamp(24px, 4vw, 48px) clamp(32px, 6vw, 72px);
+    display: flex;
+    flex-direction: column;
+    gap: clamp(28px, 4vw, 48px);
+  }
+
+  .intro {
+    gap: 16px;
+  }
+
+  .grid {
+    list-style: none;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr));
+    gap: 24px;
+  }
+
+  .card {
+    padding: 24px;
+    gap: 12px;
+    align-items: center;
+    text-align: center;
+    text-decoration: none;
+  }
+
+  .card h2 {
+    font-size: 26px;
+    line-height: 1.2;
+  }
+
+  .card .text-link {
+    text-decoration: underline;
+  }
+
+  .card:hover h2 {
+    text-decoration: underline;
+  }
+</style>

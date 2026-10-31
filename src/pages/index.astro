@@ -1,0 +1,343 @@
+---
+import Base from '../layouts/Base.astro';
+import Label from '../components/Label.astro';
+import { getCollection } from 'astro:content';
+import { getProducts, productLabel } from '../lib/products';
+import { batchFromMade } from '../lib/label';
+import { href } from '../lib/url';
+
+const products = await getProducts();
+const hero = products.find((p) => p.id === 'strawberry-jam') ?? products[0];
+
+// Made products in date order, then whatever is coming next.
+const timeline = [
+  ...products
+    .filter((p) => p.data.made)
+    .sort((a, b) => a.data.made!.localeCompare(b.data.made!))
+    .map((p) => ({ when: batchFromMade(p.data.made), what: p.data.title, next: false })),
+  ...products.filter((p) => !p.data.made).map((p) => ({ when: 'NEXT UP', what: p.data.title, next: true })),
+];
+
+const questions = [
+  'Favourite jar on the shelf?',
+  'The first thing she ever preserved?',
+  'Best spoonful of jam, and with what?',
+  'What goes into the gin next?',
+];
+
+const recipes = await getCollection('recipes');
+const firstRecipe = recipes[0];
+---
+
+<Base title="Old Ma Main's: small batch preserves" footerNav>
+  <main>
+    <section class="container hero">
+      <div class="stack hero-copy">
+        <p class="fell">SMALL BATCH &bull; MADE WITH LOVE</p>
+        <h1 class="display">Preserves, cordials and spirits, made by hand from local produce.</h1>
+        <p class="prose-width">
+          Small batches of marmalade, jelly, jam, cordial and crab apple gin. Local fruit and flowers, named plainly on
+          every label.
+        </p>
+        <div class="btn-row">
+          <a href="#range" class="btn btn--solid">SEE THE RANGE</a>
+          <a href="#about" class="btn">MEET OLD MA</a>
+        </div>
+      </div>
+      <div class="hero-label">
+        <Label {...productLabel(hero)} maxWidth={400} />
+      </div>
+    </section>
+
+    <section id="range" class="container block">
+      <div class="section-head">
+        <p class="eyebrow">THE RANGE</p>
+        <h2 class="section-title">Five things from the larder</h2>
+      </div>
+      <div class="shelf" tabindex="0" role="region" aria-label="The range">
+        {
+          products.map((p) => (
+            <article class="stack product">
+              <Label {...productLabel(p)} maxWidth={240} />
+              <h3>{p.data.title}</h3>
+              <p>{p.data.note}</p>
+            </article>
+          ))
+        }
+      </div>
+      <div class="boxed order">
+        <p class="eyebrow">WANT A JAR?</p>
+        <p class="order-how">[HOW TO ORDER: market stall, email address or shop link]</p>
+      </div>
+    </section>
+
+    <section id="year" class="container block">
+      <div class="section-head">
+        <p class="eyebrow">BATCH BY BATCH</p>
+        <h2 class="section-title">The year in jars</h2>
+      </div>
+      <ol class="timeline">
+        {
+          timeline.map((t) => (
+            <li class:list={{ next: t.next }}>
+              <p class="when">{t.when}</p>
+              <p>{t.what}</p>
+            </li>
+          ))
+        }
+      </ol>
+    </section>
+
+    <section id="about" class="ink-band">
+      <div class="container about">
+        <div class="portrait">
+          <p class="eyebrow">[PHOTO OF OLD MA]</p>
+        </div>
+        <div class="stack about-copy">
+          <p class="eyebrow">MEET OLD MA MAIN</p>
+          <h2 class="section-title">[HER STORY IN ONE LINE]</h2>
+          <p class="prose-width">[TWO OR THREE SENTENCES ABOUT HER: where she lives, and why she started making preserves]</p>
+          <div class="ruled-grid">
+            {
+              questions.map((q) => (
+                <div class="ruled-item fine">
+                  <p>{q}</p>
+                  <p>[HER ANSWER]</p>
+                </div>
+              ))
+            }
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="kitchen" class="container block block--roomy">
+      <div class="section-head">
+        <p class="eyebrow">THE KITCHEN</p>
+        <h2 class="section-title">Journal and recipes</h2>
+      </div>
+      <div class="cards">
+        <div class="double-frame card">
+          <div class="stack card-inner">
+            <p class="eyebrow">JOURNAL</p>
+            <h3>What is in season and what is in the pot</h3>
+            <p>Short posts, written when there is something to say. [FIRST POST TITLE] is on its way.</p>
+          </div>
+        </div>
+        <div class="double-frame card">
+          <div class="stack card-inner">
+            <p class="eyebrow">RECIPES</p>
+            <h3>A recipe for every jar, gathered into a book</h3>
+            <p>Each recipe is saved to the recipe book. One day the book will be printed.</p>
+            {
+              firstRecipe && (
+                <a href={href(`/recipes/${firstRecipe.id}/`)} class="text-link">
+                  OPEN A RECIPE
+                </a>
+              )
+            }
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="container cta-wrap">
+      <div class="cta">
+        <div class="stack cta-copy">
+          <p class="eyebrow">LABEL MAKER</p>
+          <h2 class="cta-title">Need a label? Make one.</h2>
+          <p class="prose-width">Pick a product, change the words and print it. Every label keeps the same frame, type and ribbon.</p>
+        </div>
+        <a href={href('/labels/')} class="btn btn--solid">MAKE A LABEL</a>
+      </div>
+    </section>
+  </main>
+</Base>
+
+<style>
+  .block {
+    padding-block: clamp(24px, 5vw, 56px);
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+  }
+
+  .block--roomy {
+    padding-block: clamp(32px, 6vw, 72px);
+  }
+
+  /* hero */
+  .hero {
+    padding-block: clamp(32px, 6vw, 72px);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 40px;
+  }
+
+  .hero-copy {
+    flex: 1 1 360px;
+    min-width: 0;
+    align-items: flex-start;
+    gap: 24px;
+  }
+
+  .hero-label {
+    flex: 1 1 300px;
+    min-width: 0;
+    display: flex;
+    justify-content: center;
+  }
+
+  /* range */
+  .shelf {
+    display: flex;
+    gap: 24px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    padding: 4px 0 16px;
+  }
+
+  .product {
+    flex: 1 0 200px;
+    max-width: 240px;
+    scroll-snap-align: start;
+    gap: 12px;
+  }
+
+  .product h3 {
+    font-size: 18px;
+    line-height: 1.3;
+  }
+
+  .product p {
+    font-size: 16px;
+    line-height: 1.5;
+  }
+
+  .order {
+    padding: 20px 24px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 24px;
+  }
+
+  .order-how {
+    flex: 1 1 260px;
+  }
+
+  /* timeline */
+  .timeline {
+    list-style: none;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 24px;
+  }
+
+  .timeline li {
+    flex: 1 1 170px;
+    min-width: 0;
+    border-top: var(--rule-frame) solid var(--ink);
+    padding-top: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    font-size: 17px;
+  }
+
+  .timeline li.next {
+    border-top-style: dashed;
+  }
+
+  .timeline .when {
+    font-weight: 700;
+    font-size: 16px;
+    letter-spacing: 0.06em;
+  }
+
+  /* about */
+  .about {
+    padding-block: clamp(40px, 7vw, 80px);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 48px;
+  }
+
+  .portrait {
+    flex: 1 1 280px;
+    max-width: 440px;
+    min-width: 0;
+    aspect-ratio: 4 / 5;
+    border: var(--rule-fine) solid var(--paper);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 24px;
+  }
+
+  .about-copy {
+    flex: 1 1 380px;
+    min-width: 0;
+    gap: 24px;
+  }
+
+  .ruled-item.fine {
+    border-top-width: var(--rule-fine);
+  }
+
+  .ruled-item.fine p:first-child {
+    line-height: 1.4;
+  }
+
+  /* kitchen */
+  .cards {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 24px;
+  }
+
+  .card {
+    flex: 1 1 400px;
+    min-width: 0;
+  }
+
+  .card-inner {
+    padding: 24px;
+    gap: 12px;
+    align-items: flex-start;
+  }
+
+  .card-inner h3 {
+    font-size: 26px;
+    line-height: 1.2;
+  }
+
+  /* label maker call to action */
+  .cta-wrap {
+    padding-bottom: clamp(32px, 6vw, 72px);
+  }
+
+  .cta {
+    border-block: var(--rule-frame) solid var(--ink);
+    padding: 32px 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+  }
+
+  .cta-copy {
+    flex: 1 1 320px;
+    min-width: 0;
+    gap: 8px;
+  }
+
+  .cta-title {
+    font-size: clamp(26px, 3.4vw, 38px);
+    line-height: 1.15;
+  }
+</style>

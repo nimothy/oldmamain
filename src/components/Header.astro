@@ -1,0 +1,50 @@
+---
+import Nav, { type NavKey } from './Nav.astro';
+import { href } from '../lib/url';
+
+export type { NavKey };
+
+interface Props {
+  current?: NavKey;
+}
+
+const { current } = Astro.props;
+---
+
+<header class="container" data-print="hide">
+  <div class="bar">
+    <a href={href('/')} class="wordmark">OLD MA MAIN'S</a>
+    <Nav label="Main" current={current} />
+  </div>
+  <div class="double-rule" aria-hidden="true"></div>
+</header>
+
+<style>
+  header {
+    padding-top: 20px;
+  }
+
+  .bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 4px 32px;
+    padding-bottom: 12px;
+  }
+
+  .wordmark {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--tap);
+    text-decoration: none;
+    font-size: clamp(24px, 3vw, 30px);
+  }
+
+  /* heavy rule, 4px gap, fine rule */
+  .double-rule {
+    height: calc(var(--rule-frame) + 4px + var(--rule-fine));
+    border-top: var(--rule-frame) solid var(--ink);
+    border-bottom: var(--rule-fine) solid var(--ink);
+  }
+</style>

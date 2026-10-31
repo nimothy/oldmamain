@@ -1,0 +1,427 @@
+---
+import Base from '../layouts/Base.astro';
+import Label from '../components/Label.astro';
+import { getProducts } from '../lib/products';
+import { MONTHS, isTooLong } from '../lib/label';
+
+const products = await getProducts();
+
+/** Presets for START FROM. Products not made yet take the current month in the browser. */
+const presets = [
+  ...products.map((p) => {
+    const [year, month] = p.data.made?.split('-') ?? [];
+    return {
+      id: p.id,
+      label: p.data.kind,
+      line1: p.data.line1.toUpperCase(),
+      line2: p.data.line2.toUpperCase(),
+      phrase: p.data.phrase.toUpperCase(),
+      month: month ? MONTHS[Number(month) - 1] : null,
+      year: year ?? null,
+    };
+  }),
+  { id: 'new', label: 'New product', line1: 'YOUR PRODUCT', line2: '', phrase: 'YOUR PHRASE HERE', month: null, year: null },
+];
+
+const start = presets.find((p) => p.id === 'strawberry-jam') ?? presets[0];
+const startMonth = start.month ?? 'August';
+const startYear = start.year ?? '2026';
+const startBatch = `${startMonth} ${startYear}`.toUpperCase();
+---
+
+<Base title="Label maker · Old Ma Main's" current="labels" description="Make a jar label in the Old Ma Main's style.">
+  <main class="container page" data-print="hide">
+    <div class="stack intro">
+      <p class="eyebrow">LABEL MAKER</p>
+      <h1>Make a label for the jar</h1>
+      <p class="prose-width">
+        Pick a product, change the words and print it. The frame, type and ribbon stay the same, so every jar looks like
+        Old Ma's.
+      </p>
+    </div>
+
+    <div class="workbench">
+      <div class="preview">
+        <Label
+          id="label-preview"
+          line1={start.line1}
+          line2={start.line2}
+          batch={startBatch}
+          phrase={start.phrase}
+        />
+      </div>
+
+      <div class="double-frame controls">
+        <form id="label-form" class="stack form">
+          <fieldset class="stack">
+            <legend class="eyebrow">START FROM</legend>
+            <div class="presets">
+              {
+                presets.map((p) => (
+                  <button
+                    type="button"
+                    class="btn btn--small"
+                    data-preset={p.id}
+                    aria-pressed={p.id === start.id ? 'true' : 'false'}
+                  >
+                    {p.label}
+                  </button>
+                ))
+              }
+            </div>
+          </fieldset>
+
+          <div class="row">
+            <div class="field grow">
+              <label for="line1">FIRST LINE</label>
+              <input id="line1" name="line1" type="text" autocomplete="off" value={start.line1} />
+            </div>
+            <div class="field grow">
+              <label for="line2">SECOND LINE (OPTIONAL)</label>
+              <input id="line2" name="line2" type="text" autocomplete="off" value={start.line2} />
+            </div>
+          </div>
+
+          <div role="status" class="warning-region">
+            <p id="too-long" class="boxed warning" hidden={!isTooLong(start)}>
+              That name is too long to sit inside the frame. Shorten the wording.
+            </p>
+          </div>
+
+          <div class="row">
+            <div class="field month">
+              <label for="month">MONTH MADE</label>
+              <select id="month" name="month">
+                {MONTHS.map((m) => <option value={m} selected={m === startMonth}>{m}</option>)}
+              </select>
+            </div>
+            <div class="field year">
+              <label for="year">YEAR</label>
+              <input id="year" name="year" type="text" inputmode="numeric" maxlength="4" value={startYear} />
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="phrase">HOW IS IT MADE?</label>
+            <input id="phrase" name="phrase" type="text" autocomplete="off" value={start.phrase} aria-describedby="phrase-hint" />
+            <p id="phrase-hint" class="hint">A short phrase, under four words. MADE WITH LOVE is added for you.</p>
+          </div>
+
+          <div class="btn-row">
+            <button type="button" id="download" class="btn btn--solid">DOWNLOAD PNG</button>
+            <button type="button" id="print" class="btn">PRINT A SHEET</button>
+          </div>
+          <p class="hint">Home printers turn the brown ink near-black. That is fine.</p>
+        </form>
+      </div>
+    </div>
+
+    <section class="stack keeps">
+      <h2>What every label keeps</h2>
+      <div class="ruled-grid">
+        <div class="ruled-item">
+          <p>Everything in capitals</p>
+          <p>Type what you like. The label sets it in capitals.</p>
+        </div>
+        <div class="ruled-item">
+          <p>Month and year made</p>
+          <p>The batch line says when it was made. Never a best before date.</p>
+        </div>
+        <div class="ruled-item">
+          <p>Names that fit</p>
+          <p>Long names shrink to fit. If they still do not, shorten the wording.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Only shown when printing: a sheet of four labels. -->
+  <div id="print-sheet" class="print-sheet" aria-hidden="true"></div>
+
+  <script type="application/json" id="label-presets" set:html={JSON.stringify(presets)} />
+</Base>
+
+<script>
+  import { renderLabelSvg, isTooLong, MONTHS, type LabelText } from '../lib/label';
+  import caslon400 from '@fontsource/libre-caslon-text/files/libre-caslon-text-latin-400-normal.woff2?url';
+  import caslon700 from '@fontsource/libre-caslon-text/files/libre-caslon-text-latin-700-normal.woff2?url';
+  import fell400 from '@fontsource/im-fell-english-sc/files/im-fell-english-sc-latin-400-normal.woff2?url';
+
+  type Preset = {
+    id: string;
+    line1: string;
+    line2: string;
+    phrase: string;
+    month: string | null;
+    year: string | null;
+  };
+
+  const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
+
+  const presets: Preset[] = JSON.parse($('label-presets').textContent ?? '[]');
+  const preview = $('label-preview');
+  const sheet = $('print-sheet');
+  const tooLong = $('too-long');
+  const inputs = {
+    line1: $<HTMLInputElement>('line1'),
+    line2: $<HTMLInputElement>('line2'),
+    month: $<HTMLSelectElement>('month'),
+    year: $<HTMLInputElement>('year'),
+    phrase: $<HTMLInputElement>('phrase'),
+  };
+  const presetButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-preset]'));
+
+  function current(): LabelText {
+    return {
+      line1: inputs.line1.value,
+      line2: inputs.line2.value,
+      batch: `${inputs.month.value} ${inputs.year.value}`,
+      phrase: inputs.phrase.value,
+    };
+  }
+
+  function render() {
+    const text = current();
+    preview.innerHTML = renderLabelSvg(text, { idPrefix: 'preview' });
+    tooLong.hidden = !isTooLong(text);
+  }
+
+  function pickPreset(id: string) {
+    const p = presets.find((x) => x.id === id);
+    if (!p) return;
+    const now = new Date();
+    inputs.line1.value = p.line1;
+    inputs.line2.value = p.line2;
+    inputs.phrase.value = p.phrase;
+    inputs.month.value = p.month ?? MONTHS[now.getMonth()];
+    inputs.year.value = p.year ?? String(now.getFullYear());
+    for (const b of presetButtons) b.setAttribute('aria-pressed', String(b.dataset.preset === id));
+    render();
+  }
+
+  for (const b of presetButtons) b.addEventListener('click', () => pickPreset(b.dataset.preset!));
+  for (const el of Object.values(inputs)) el.addEventListener('input', render);
+
+  // ---- download PNG ----
+
+  async function fontAsDataUrl(url: string): Promise<string> {
+    const blob = await (await fetch(url)).blob();
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  }
+
+  let embeddedFonts: Promise<string> | undefined;
+  function fontFaces(): Promise<string> {
+    embeddedFonts ??= Promise.all([caslon400, caslon700, fell400].map(fontAsDataUrl)).then(
+      ([c4, c7, f4]) => `<style>
+@font-face{font-family:'Libre Caslon Text';font-weight:400;src:url(${c4}) format('woff2')}
+@font-face{font-family:'Libre Caslon Text';font-weight:700;src:url(${c7}) format('woff2')}
+@font-face{font-family:'IM Fell English SC';font-weight:400;src:url(${f4}) format('woff2')}
+</style>`,
+    );
+    return embeddedFonts;
+  }
+
+  function fileName(text: LabelText) {
+    const slug = [text.line1, text.line2, text.batch]
+      .join(' ')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '');
+    return `old-ma-mains-${slug || 'label'}.png`;
+  }
+
+  async function downloadPng(button: HTMLButtonElement) {
+    const scale = 3; // 1536 × 2160, plenty for print
+    const text = current();
+    const original = button.textContent;
+    button.disabled = true;
+    button.textContent = 'PREPARING…';
+    try {
+      const svg = renderLabelSvg(text, {
+        idPrefix: 'png',
+        width: 512 * scale,
+        height: 720 * scale,
+        extraDefs: await fontFaces(),
+      });
+      const img = new Image();
+      const url = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }));
+      await new Promise<void>((resolve, reject) => {
+        img.onload = () => resolve();
+        img.onerror = () => reject(new Error('Could not draw the label'));
+        img.src = url;
+      });
+      // Give the browser a beat to apply the embedded fonts before rasterising.
+      await new Promise((r) => setTimeout(r, 50));
+      const canvas = document.createElement('canvas');
+      canvas.width = 512 * scale;
+      canvas.height = 720 * scale;
+      canvas.getContext('2d')!.drawImage(img, 0, 0);
+      URL.revokeObjectURL(url);
+      const png = await new Promise<Blob | null>((r) => canvas.toBlob(r, 'image/png'));
+      if (!png) throw new Error('Could not make the PNG');
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(png);
+      a.download = fileName(text);
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    } catch (err) {
+      console.error(err);
+      alert('Sorry, the label could not be saved as a PNG in this browser. Try printing a sheet instead.');
+    } finally {
+      button.disabled = false;
+      button.textContent = original;
+    }
+  }
+
+  const downloadButton = $<HTMLButtonElement>('download');
+  downloadButton.addEventListener('click', () => downloadPng(downloadButton));
+
+  // ---- print a sheet ----
+
+  function fillSheet() {
+    const text = current();
+    sheet.innerHTML = Array.from(
+      { length: 4 },
+      (_, i) => `<div class="sheet-label">${renderLabelSvg(text, { idPrefix: `sheet${i}`, accessible: false })}</div>`,
+    ).join('');
+  }
+
+  window.addEventListener('beforeprint', fillSheet);
+  $('print').addEventListener('click', () => {
+    fillSheet();
+    window.print();
+  });
+</script>
+
+<style>
+  .page {
+    padding-block: clamp(28px, 5vw, 56px);
+    display: flex;
+    flex-direction: column;
+    gap: clamp(28px, 4vw, 48px);
+  }
+
+  .intro {
+    gap: 12px;
+  }
+
+  h1 {
+    font-size: clamp(34px, 4.6vw, 56px);
+    line-height: 1.1;
+  }
+
+  .workbench {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 48px;
+  }
+
+  .preview {
+    flex: 1 1 340px;
+    min-width: 0;
+    display: flex;
+    justify-content: center;
+  }
+
+  .controls {
+    flex: 1 1 380px;
+    min-width: 0;
+  }
+
+  .form {
+    padding: clamp(16px, 3vw, 28px);
+    gap: 24px;
+  }
+
+  fieldset {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    min-width: 0;
+    gap: 10px;
+  }
+
+  legend {
+    padding: 0;
+    margin-bottom: 10px;
+  }
+
+  .presets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+
+  .grow {
+    flex: 1 1 180px;
+  }
+
+  .month {
+    flex: 2 1 160px;
+  }
+
+  .year {
+    flex: 1 1 110px;
+  }
+
+  /* Keep the live region in the tree so changes are announced, but take back the gap while empty. */
+  .warning-region:has(> [hidden]) {
+    margin-top: -24px;
+  }
+
+  .warning {
+    padding: 10px 12px;
+    font-size: 16px;
+  }
+
+  .btn:disabled {
+    cursor: progress;
+    opacity: 0.8;
+  }
+
+  .keeps {
+    gap: 20px;
+  }
+
+  .keeps h2 {
+    font-size: clamp(26px, 3.4vw, 36px);
+    line-height: 1.15;
+  }
+
+  /* print sheet: hidden on screen, four labels to an A4 page */
+  .print-sheet {
+    display: none;
+  }
+
+  @page {
+    size: A4;
+    margin: 12mm;
+  }
+
+  @media print {
+    .print-sheet {
+      display: grid;
+      grid-template-columns: repeat(2, 86mm);
+      gap: 8mm;
+      justify-content: center;
+    }
+
+    .print-sheet :global(.sheet-label) {
+      width: 86mm;
+      height: calc(86mm * 720 / 512);
+      break-inside: avoid;
+    }
+  }
+</style>

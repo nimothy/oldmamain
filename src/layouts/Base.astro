@@ -1,0 +1,50 @@
+---
+import '@fontsource/libre-caslon-text/400.css';
+import '@fontsource/libre-caslon-text/700.css';
+import '@fontsource/im-fell-english-sc/400.css';
+import '../styles/global.css';
+import Header, { type NavKey } from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import { href } from '../lib/url';
+
+interface Props {
+  title: string;
+  description?: string;
+  current?: NavKey;
+  /** Show the nav links in the footer (home page). */
+  footerNav?: boolean;
+  /** Fine paper rule above the footer, for pages that end on a dark band. */
+  footerRule?: boolean;
+}
+
+const {
+  title,
+  description = 'Small batch preserves, cordials and spirits, made by hand from local produce.',
+  current,
+  footerNav = false,
+  footerRule = false,
+} = Astro.props;
+const canonical = new URL(Astro.url.pathname, Astro.site);
+---
+
+<!doctype html>
+<html lang="en-GB">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    <link rel="icon" type="image/svg+xml" href={href('/favicon.svg')} />
+    <meta name="theme-color" content="#fcf4d8" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content={canonical} />
+  </head>
+  <body>
+    <Header current={current} />
+    <slot />
+    <Footer nav={footerNav} rule={footerRule} />
+  </body>
+</html>
