@@ -2,6 +2,7 @@
 import Base from '../layouts/Base.astro';
 import Label from '../components/Label.astro';
 import { getProducts } from '../lib/products';
+import { LABELS_PASSWORD_SHA256, LABELS_UNLOCK_KEY, LABELS_UNLOCKED_ATTR } from '../lib/labels-gate';
 import { BASKETS, DEFAULT_BASKET, MADE_WITH_MAX, MONTHS, PRODUCT_MAX_CHARS, SHEET, isBasketId, isTooLong } from '../lib/label';
 
 const products = await getProducts();
@@ -42,7 +43,36 @@ const perSheet = SHEET.cols * SHEET.rows;
 ---
 
 <Base title="Label maker · Old Ma Main's" current="labels" description="Make a jar label in the Old Ma Main's style.">
-  <main class="container page" data-print="hide">
+  <Fragment slot="head">
+    <meta name="robots" content="noindex, nofollow" />
+    <!-- Before first paint: show the label maker straight away in a browser that has already unlocked it. -->
+    <script
+      is:inline
+      set:html={`try{if(localStorage.getItem(${JSON.stringify(LABELS_UNLOCK_KEY)})===${JSON.stringify(LABELS_PASSWORD_SHA256)})document.documentElement.setAttribute(${JSON.stringify(LABELS_UNLOCKED_ATTR)},'')}catch(e){}`}
+    />
+  </Fragment>
+
+  <main id="label-gate" class="container gate" data-print="hide">
+    <div class="double-frame gate-box">
+      <form id="gate-form" class="stack gate-form">
+        <p class="eyebrow">LABEL MAKER</p>
+        <h1>For the kitchen only</h1>
+        <p>The label maker is for making Old Ma Main&rsquo;s own jars. Enter the password to open it.</p>
+        <div class="field">
+          <label for="gate-password">PASSWORD</label>
+          <input id="gate-password" name="password" type="password" autocomplete="current-password" required />
+        </div>
+        <div role="status">
+          <p id="gate-error" class="boxed warning" hidden>That is not the password. Try again.</p>
+        </div>
+        <div class="btn-row">
+          <button type="submit" class="btn btn--solid">OPEN THE LABEL MAKER</button>
+        </div>
+      </form>
+    </div>
+  </main>
+
+  <main id="label-maker" class="container page" data-print="hide">
     <div class="stack intro">
       <p class="eyebrow">LABEL MAKER</p>
       <h1>Make a label for the jar</h1>
@@ -192,6 +222,34 @@ const perSheet = SHEET.cols * SHEET.rows;
 
   <script type="application/json" id="label-presets" set:html={JSON.stringify(presets)} />
 </Base>
+
+<script>
+  import { sha256Hex } from '../lib/sha256';
+  import { LABELS_PASSWORD_SHA256, LABELS_UNLOCK_KEY, LABELS_UNLOCKED_ATTR } from '../lib/labels-gate';
+
+  // ---- password gate ----
+  const gateForm = document.getElementById('gate-form') as HTMLFormElement;
+  const gateInput = document.getElementById('gate-password') as HTMLInputElement;
+  const gateError = document.getElementById('gate-error')!;
+  if (!document.documentElement.hasAttribute(LABELS_UNLOCKED_ATTR)) gateInput.focus();
+  gateForm.addEventListener('submit', (event) => {
+    event.preventDefault();
+    if (sha256Hex(gateInput.value) === LABELS_PASSWORD_SHA256) {
+      try {
+        localStorage.setItem(LABELS_UNLOCK_KEY, LABELS_PASSWORD_SHA256);
+      } catch {
+        // Not remembered in this browser; still open for this visit.
+      }
+      document.documentElement.setAttribute(LABELS_UNLOCKED_ATTR, '');
+      gateInput.value = '';
+      gateError.hidden = true;
+      document.querySelector<HTMLButtonElement>('[data-preset][aria-pressed="true"]')?.focus();
+    } else {
+      gateError.hidden = false;
+      gateInput.select();
+    }
+  });
+</script>
 
 <script>
   import { jsPDF } from 'jspdf';
@@ -428,7 +486,40 @@ const perSheet = SHEET.cols * SHEET.rows;
   });
 </script>
 
+<style is:global>
+  /* Locked until the password is entered (or remembered); without JavaScript it stays locked. */
+  html:not([data-labels-unlocked]) #label-maker,
+  html:not([data-labels-unlocked]) #print-sheet {
+    display: none !important;
+  }
+
+  html[data-labels-unlocked] #label-gate {
+    display: none;
+  }
+</style>
+
 <style>
+  .gate {
+    padding-block: clamp(40px, 8vw, 96px);
+    display: flex;
+    justify-content: center;
+  }
+
+  .gate-box {
+    width: 100%;
+    max-width: 520px;
+  }
+
+  .gate-form {
+    padding: clamp(20px, 4vw, 32px);
+    gap: 20px;
+  }
+
+  .gate-form h1 {
+    font-size: clamp(30px, 4vw, 40px);
+    line-height: 1.1;
+  }
+
   .page {
     padding-block: clamp(28px, 5vw, 56px);
     display: flex;

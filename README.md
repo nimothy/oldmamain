@@ -23,6 +23,8 @@ npm run preview  # serve the built site
 | `src/styles/global.css` | Design tokens (paper, ink, rules, fonts) and shared patterns. |
 | `src/components/` | Header, nav, footer, label and recipe book cover. |
 
+The label maker lives at `/labels/` and is not linked from the site. It sits behind a light password gate (`src/lib/labels-gate.ts`): only the password's SHA-256 is in the code, and a browser stays unlocked once the password has been entered. GitHub Pages is static, so this keeps it out of the way rather than truly secure. To change the password, put the output of `printf '%s' 'new password' | shasum -a 256` in `LABELS_PASSWORD_SHA256`.
+
 Copy in `[SQUARE BRACKETS]` is placeholder text still to be written.
 
 ## Deploy
