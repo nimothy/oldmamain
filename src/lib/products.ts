@@ -15,5 +15,6 @@ export function productLabel(p: Product): LabelText {
     batch: batchFromMade(p.data.made),
     phrase: p.data.phrase,
     basket: isBasketId(p.data.basket) ? p.data.basket : undefined,
+    collab: p.data.collab,
   };
 }

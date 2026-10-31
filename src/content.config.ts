@@ -16,6 +16,8 @@ const products = defineCollection({
     line2: z.string().default(''),
     phrase: z.string(),
     /** Engraved basket on the label: one of the design system's baskets. */
+    /** Who else made the latest batch, e.g. "The Junior Andersons". Omit when Old Ma made it alone. */
+    collab: z.string().optional(),
     basket: z.enum(BASKETS.map((b) => b.id) as [string, ...string[]]),
     /** Month the latest batch was made, as YYYY-MM. Omit for products not made yet. */
     made: z

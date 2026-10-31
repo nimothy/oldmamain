@@ -65,6 +65,27 @@ export interface LabelText {
   phrase?: string;
   /** Which engraved basket to show. */
   basket?: BasketId;
+  /**
+   * Who else made this batch, e.g. "THE JUNIOR ANDERSONS". Set as
+   * "WITH THE JUNIOR ANDERSONS" on a smaller arc inside the brand arc.
+   * Leave empty when Old Ma made the batch alone.
+   */
+  collab?: string;
+}
+
+/** The made-with line, WITH included, is capped at this many characters. */
+export const MADE_WITH_MAX = 27;
+
+/**
+ * "the junior andersons" → "WITH THE JUNIOR ANDERSONS". Too long: whole words
+ * come off the end, never half a word. Empty → "" (no made-with line).
+ */
+export function madeWith(value: string | undefined | null): string {
+  let c = String(value ?? '').trim().replace(/\s+/g, ' ').toUpperCase();
+  if (!c) return '';
+  if (!/^(WITH |& )/.test(c)) c = `WITH ${c}`;
+  while (c.length > MADE_WITH_MAX && c.lastIndexOf(' ') > 0) c = c.slice(0, c.lastIndexOf(' '));
+  return c.slice(0, MADE_WITH_MAX);
 }
 
 const clean = (s: string | undefined | null) => String(s ?? '').trim().toUpperCase();
@@ -87,7 +108,8 @@ export function tagline(phrase: string | undefined): string {
 }
 
 export function labelAlt(text: LabelText): string {
-  return `Label: ${productLines(text).join(' ')}, ${clean(text.batch)}, ${tagline(text.phrase)}`;
+  const withLine = madeWith(text.collab);
+  return `Label: ${productLines(text).join(' ')}${withLine ? `, made ${withLine.toLowerCase()}` : ''}, ${clean(text.batch)}, ${tagline(text.phrase)}`;
 }
 
 export interface LabelSvgOptions {
@@ -127,9 +149,23 @@ export function renderLabelSvg(text: LabelText, opts: LabelSvgOptions = {}): str
   const tag = tagline(text.phrase);
   const tagSize = Math.max(20, Math.min(38, 740 / (tag.length * 0.72)));
 
+  // Made-with line: fitted to about 600 along the inner arc, between 28 and 42.
+  const withLine = madeWith(text.collab);
+  const withSize = withLine
+    ? Math.max(28, Math.min(42, (600 - 3 * withLine.length) / (withLine.length * 0.68)))
+    : 0;
+
   // Basket and laurels shrink a little on two-line names so the stack keeps its spacing.
-  const basketBox = two ? { x: 257, y: 368, w: 510, h: 403 } : { x: 226, y: 372, w: 566, h: 466 };
-  const laurelBox = two ? { x: 112, y: 500, w: 113, h: 200 } : { x: 95, y: 530, w: 130, h: 230 };
+  // With a made-with line they move down 72 and the basket shrinks, so the inner arc's ends stay clear.
+  const dy = withLine ? 72 : 0;
+  const basketBox = two
+    ? withLine
+      ? { x: 282, y: 448, w: 460, h: 340 }
+      : { x: 257, y: 368, w: 510, h: 403 }
+    : withLine
+      ? { x: 254, y: 452, w: 516, h: 396 }
+      : { x: 226, y: 372, w: 566, h: 466 };
+  const laurelBox = two ? { x: 112, y: 500 + dy, w: 113, h: 200 } : { x: 95, y: 530 + dy, w: 130, h: 230 };
 
   const basketHref = opts.hrefs?.basket ?? basketUrl(text.basket ?? DEFAULT_BASKET);
   const corner = escapeXml(opts.hrefs?.corner ?? ORNAMENTS.corner);
@@ -150,6 +186,7 @@ export function renderLabelSvg(text: LabelText, opts: LabelSvgOptions = {}): str
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${LABEL_WIDTH} ${LABEL_HEIGHT}"${dims}${a11y} style="display:block">
 <defs>
 <path id="${id}-arc" d="M90 460 A640 640 0 0 1 934 460" fill="none"/>
+<path id="${id}-with" d="M67.7 568.2 A580 580 0 0 1 956.3 568.2" fill="none"/>
 ${opts.extraDefs ?? ''}
 </defs>
 <rect width="${LABEL_WIDTH}" height="${LABEL_HEIGHT}" fill="${PAPER}"/>
@@ -163,6 +200,11 @@ ${img(corner, cornerBox, 'translate(1024 1512) scale(-1 -1)')}
 ${img(laurel, laurelBox)}
 ${img(laurel, laurelBox, 'translate(1024 0) scale(-1 1)')}
 ${img(escapeXml(basketHref), basketBox)}
+${
+  withLine
+    ? `<text font-family="${CASLON}" font-weight="700" font-size="${round(withSize)}" letter-spacing="3" fill="${INK}"><textPath href="#${id}-with" startOffset="50%" text-anchor="middle">${escapeXml(withLine)}</textPath></text>`
+    : ''
+}
 <path d="M140 1090 H884 L850 1142 L884 1194 H140 L174 1142 Z" fill="${PAPER}" stroke="${INK}" stroke-width="5" stroke-linejoin="miter"/>
 ${productText}
 <text x="512" y="1168" font-size="${round(batchSize)}" text-anchor="middle" font-family="${CASLON}" font-weight="700" letter-spacing="3" fill="${INK}">${escapeXml(batch)}</text>

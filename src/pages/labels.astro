@@ -2,7 +2,7 @@
 import Base from '../layouts/Base.astro';
 import Label from '../components/Label.astro';
 import { getProducts } from '../lib/products';
-import { BASKETS, DEFAULT_BASKET, MONTHS, PRODUCT_MAX_CHARS, SHEET, isBasketId, isTooLong } from '../lib/label';
+import { BASKETS, DEFAULT_BASKET, MADE_WITH_MAX, MONTHS, PRODUCT_MAX_CHARS, SHEET, isBasketId, isTooLong } from '../lib/label';
 
 const products = await getProducts();
 
@@ -127,6 +127,27 @@ const perSheet = SHEET.cols * SHEET.rows;
             <p id="phrase-hint" class="hint">A short phrase, under four words. MADE WITH LOVE is added for you.</p>
           </div>
 
+          <div class="field">
+            <label for="collab">MADE WITH <span class="optional">(optional)</span></label>
+            <input
+              id="collab"
+              name="collab"
+              type="text"
+              autocomplete="off"
+              placeholder="e.g. THE JUNIOR ANDERSONS"
+              aria-describedby="collab-hint"
+            />
+            <p id="collab-hint" class="hint">
+              For a batch made with someone else. WITH is added for you, on a small arc under OLD MA MAIN&rsquo;S.
+              Leave it empty when Old Ma made the batch alone.
+            </p>
+            <div role="status">
+              <p id="collab-trimmed" class="boxed warning" hidden>
+                Too long for the arc ({MADE_WITH_MAX} letters with WITH), so the label shows <strong id="collab-shown"></strong>.
+              </p>
+            </div>
+          </div>
+
           <div class="btn-row">
             <button type="button" id="download" class="btn btn--solid">DOWNLOAD PNG</button>
             <button type="button" id="download-pdf" class="btn">DOWNLOAD PDF</button>
@@ -178,6 +199,7 @@ const perSheet = SHEET.cols * SHEET.rows;
     renderLabelSvg,
     isTooLong,
     isBasketId,
+    madeWith,
     basketUrl,
     ORNAMENTS,
     DEFAULT_BASKET,
@@ -207,6 +229,8 @@ const perSheet = SHEET.cols * SHEET.rows;
   const preview = $('label-preview');
   const sheet = $('print-sheet');
   const tooLong = $('too-long');
+  const collabTrimmed = $('collab-trimmed');
+  const collabShown = $('collab-shown');
   const inputs = {
     line1: $<HTMLInputElement>('line1'),
     line2: $<HTMLInputElement>('line2'),
@@ -214,6 +238,7 @@ const perSheet = SHEET.cols * SHEET.rows;
     month: $<HTMLSelectElement>('month'),
     year: $<HTMLInputElement>('year'),
     phrase: $<HTMLInputElement>('phrase'),
+    collab: $<HTMLInputElement>('collab'),
   };
   const presetButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-preset]'));
 
@@ -223,6 +248,7 @@ const perSheet = SHEET.cols * SHEET.rows;
       line2: inputs.line2.value,
       batch: `${inputs.month.value} ${inputs.year.value}`,
       phrase: inputs.phrase.value,
+      collab: inputs.collab.value,
       basket: isBasketId(inputs.basket.value) ? inputs.basket.value : DEFAULT_BASKET,
     };
   }
@@ -231,6 +257,11 @@ const perSheet = SHEET.cols * SHEET.rows;
     const text = current();
     preview.innerHTML = renderLabelSvg(text, { idPrefix: 'preview' });
     tooLong.hidden = !isTooLong(text);
+    // A made-with name too long for the arc loses whole words; say what the label shows.
+    const shown = madeWith(text.collab);
+    const typed = (text.collab ?? '').trim().replace(/\s+/g, ' ').toUpperCase().replace(/^(WITH |& )/, '');
+    collabTrimmed.hidden = !typed || shown.endsWith(typed);
+    collabShown.textContent = shown;
   }
 
   function pickPreset(id: string) {
@@ -321,7 +352,7 @@ const perSheet = SHEET.cols * SHEET.rows;
   }
 
   function fileName(text: LabelText, ext: string) {
-    const slug = [text.line1, text.line2, text.batch]
+    const slug = [text.line1, text.line2, madeWith(text.collab), text.batch]
       .join(' ')
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
