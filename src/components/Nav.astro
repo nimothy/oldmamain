@@ -2,7 +2,7 @@
 import { href } from '../lib/url';
 import { getRecipes } from '../lib/recipes';
 
-export type NavKey = 'range' | 'kitchen' | 'labels';
+export type NavKey = 'range' | 'kitchen' | 'labels' | 'about';
 
 interface Props {
   label: string;
@@ -17,6 +17,7 @@ const links: { key: NavKey; text: string; to: string }[] = [
   { key: 'range', text: 'THE RANGE', to: href('/#range') },
   ...(hasRecipes ? [{ key: 'kitchen' as const, text: 'THE KITCHEN', to: href('/recipes/') }] : []),
   { key: 'labels', text: 'LABELS', to: href('/labels/') },
+  { key: 'about', text: 'ABOUT', to: href('/#about') },
 ];
 ---
 

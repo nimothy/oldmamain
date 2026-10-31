@@ -4,6 +4,8 @@ import Label from '../components/Label.astro';
 import { getProducts, productLabel } from '../lib/products';
 import { batchFromMade } from '../lib/label';
 import { href } from '../lib/url';
+import { Image } from 'astro:assets';
+import oldMaMain from '../assets/old-ma-main.jpg';
 
 const products = await getProducts();
 const hero = products.find((p) => p.id === 'strawberry-jam') ?? products[0];
@@ -30,6 +32,7 @@ const timeline = [
         </p>
         <div class="btn-row">
           <a href="#range" class="btn btn--solid">SEE THE RANGE</a>
+          <a href="#about" class="btn">MEET OLD MA</a>
         </div>
       </div>
       <div class="hero-label">
@@ -72,7 +75,39 @@ const timeline = [
       </ol>
     </section>
 
-    <section class="container cta-wrap">
+    <section id="about" class="ink-band">
+      <div class="container about">
+        <figure class="portrait">
+          <div class="portrait-inner">
+            <Image
+              src={oldMaMain}
+              alt="A pencil drawing of Old Ma Main at her kitchen table with a colander and a big bowl of fruit, jars on the dresser behind her."
+              widths={[400, 700, 1000, 1460]}
+              sizes="(min-width: 900px) 440px, 100vw"
+              loading="lazy"
+            />
+          </div>
+        </figure>
+        <div class="stack about-copy">
+          <p class="eyebrow">MEET OLD MA MAIN</p>
+          <h2 class="section-title">Old Ma Main, at the kitchen table</h2>
+          <p class="prose-width">
+            The &ldquo;Old&rdquo; on the label is the recipes, not her. Old Ma Main makes everything at her own kitchen
+            table, one pan and one batch at a time, and the finished jars wait in the cupboard under the stairs.
+          </p>
+          <p class="prose-width">
+            Each jar starts with what&rsquo;s ready: elderflowers picked from the hedgerow in May, strawberries at
+            midsummer, and local crab apples in autumn, just as the seasons turn. The peel is still cut by hand and the
+            jelly still drips through overnight, because some jobs shouldn&rsquo;t be hurried.
+          </p>
+          <p class="prose-width pull">
+            Each jar carries the month it was made, so you know exactly which season you&rsquo;re enjoying.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section class="container cta-wrap cta-wrap--after-band">
       <div class="cta">
         <div class="stack cta-copy">
           <p class="eyebrow">LABEL MAKER</p>
@@ -176,9 +211,63 @@ const timeline = [
     letter-spacing: 0.06em;
   }
 
+  /* about */
+  .about {
+    padding-block: clamp(40px, 7vw, 80px);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 48px;
+  }
+
+  /* The drawing sits on a paper panel with the label's double frame. */
+  .portrait {
+    flex: 1 1 280px;
+    max-width: 440px;
+    min-width: 0;
+    margin: 0;
+    background: var(--paper);
+    border: var(--rule-frame) solid var(--paper);
+    padding: 8px;
+  }
+
+  .portrait-inner {
+    border: var(--rule-fine) solid var(--ink);
+    padding: 6px;
+  }
+
+  .portrait img {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 4 / 5;
+    object-fit: cover;
+  }
+
+  .about-copy {
+    flex: 1 1 380px;
+    min-width: 0;
+    gap: 20px;
+  }
+
+  .about-copy h2 {
+    margin-bottom: 4px;
+  }
+
+  /* The closing line, set like the batch ribbon: between two fine rules. */
+  .pull {
+    border-block: var(--rule-fine) solid var(--paper);
+    padding: 10px 0;
+    font-weight: 700;
+  }
+
   /* label maker call to action */
   .cta-wrap {
     padding-bottom: clamp(32px, 6vw, 72px);
+  }
+
+  .cta-wrap--after-band {
+    padding-top: clamp(32px, 6vw, 72px);
   }
 
   .cta {
